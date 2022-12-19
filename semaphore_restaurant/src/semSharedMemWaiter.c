@@ -148,6 +148,9 @@ static int waitForClientOrChef()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+      //sh->waiterStat = FOODREQ;
+      //saveState(nFic, sh);
+
 
     /* insert your code here */
     
@@ -156,12 +159,18 @@ static int waitForClientOrChef()
         exit (EXIT_FAILURE);
     }
 
+     //sh->waiterStat = FOODREADY;
+     //saveState(nFic, sh);
+
     /* insert your code here */
 
     if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+
+    //sh->waiterStat = PAYREQ;
+    //saveState(nFic, sh);
 
     /* insert your code here */
 
@@ -187,6 +196,8 @@ static void informChef ()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    //sh->waiterStat = 
+    //saveState(nFic, sh);
 
     /* insert your code here */
 
@@ -194,6 +205,11 @@ static void informChef ()
     { perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+
+    /*if (semDown(semgid, sh->chefSem) == -1) {        // wait for chef to cook the meal
+        perror("error on the down operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
+    }*/
 
     /* insert your code here */
 }
