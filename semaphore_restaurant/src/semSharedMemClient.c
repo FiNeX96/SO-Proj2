@@ -166,12 +166,28 @@ static bool waitFriends(int id)
         exit (EXIT_FAILURE);
     }
 
+    
+    sh->fSt.tableClients++; // +1 cliente na mesa
+    sh->fSt.st.clientStat[id] = WAIT_FOR_FRIENDS; // cliente fica à espera
+    if (sh->fSt.tableClients == 1) { // se for o primeiro cliente
+        first = true;
+    }
+    sh->friendsArrived++;// +1 cliente à espera
+    if (sh->fSt.tableClients == 20) { // se for o último cliente
+        sh->fSt.tableLast= id; // guarda o id do último cliente
+    }
+
+
     /* insert your code here */
 
     if (semUp (semgid, sh->mutex) == -1)                                                      /* exit critical region */
     { perror ("error on the up operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
+
+    // wait in table till all friends get there
+    
+    
 
     /* insert your code here */
 

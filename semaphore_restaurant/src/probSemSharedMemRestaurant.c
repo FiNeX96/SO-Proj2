@@ -198,6 +198,6 @@ int main (int argc, char *argv[])
         exit (EXIT_FAILURE);
     }
     shmemDestroy(shmemConnect(key));
-
+    semDestroy(semConnect(key));
     return EXIT_SUCCESS;
 }
