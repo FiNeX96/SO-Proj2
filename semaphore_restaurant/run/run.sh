@@ -13,6 +13,12 @@ fi
 
 for i in $(seq 1 $n)
 do
+     ipcrm -a # reset all shared regions and semaphores
      echo -e "\n\e[34;1mRun n.º $i\e[0m"
      ./probSemSharedMemRestaurant
+     echo "RUN $i DONE"
+     ipcrm -a # reset all shared regions and semaphores
+
 done
+
+
