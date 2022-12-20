@@ -200,6 +200,12 @@ static void informChef ()
         exit (EXIT_FAILURE);
     }
 
+    // wait for food from chef
+    if (semDown (semgid, sh->w) == -1) {
+        perror ("error on the down operation for semaphore access (WT)");
+        exit (EXIT_FAILURE);
+    }
+
     /* insert your code here */
 }
 

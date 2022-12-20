@@ -172,7 +172,7 @@ static bool waitFriends(int id)
         sh->fSt.tableFirst = id; // guarda o id do primeiro cliente
         printf("VO FZR DOWN NO FRIENDS ARRIVED \n");
         if (semDown (semgid, sh->friendsArrived) == -1) {            
-        printf("NOT RIP ANYMORE\n");         // deadlock aqui fodase                          
+        printf("NOT RIP ANYMORE\n");         // deadlock aqui fodasse                          
         perror ("error on the down operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
@@ -185,7 +185,7 @@ static bool waitFriends(int id)
         exit (EXIT_FAILURE);
     }
     }
-    saveState (nFic, &(sh->fSt));
+    saveState (nFic, &(sh->fSt)); // maybe mudar isto de sitio para o print ficar certo?
     /* insert your code here  */
 
     if (semUp (semgid, sh->mutex) == -1)                                                      /* exit critical region */
