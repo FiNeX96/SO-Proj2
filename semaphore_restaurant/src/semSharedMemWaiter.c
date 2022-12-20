@@ -148,6 +148,11 @@ static int waitForClientOrChef()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    // nesta secção o waiter dá update no estado para waiting
+    // update state to waiting 
+    sh->fSt.st.waiterStat = WAIT_FOR_REQUEST;
+    // save state
+    saveState (nFic, &sh->fSt);
 
     /* insert your code here */
     
@@ -156,13 +161,32 @@ static int waitForClientOrChef()
         exit (EXIT_FAILURE);
     }
 
+    //nesta parte o waiter blocka o request received para só receber 1 request de cada vez
+
+    // sem down request received
+    if (semDown (semgid, sh->requestReceived) == -1)  {                                                 
+        perror ("error on the up operation for semaphore access (WT)");
+        exit (EXIT_FAILURE);
+    }
+    // read the request, only 1 at each time should have a value of 1 , the others should be 0
+    
     /* insert your code here */
 
     if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    if(sh->fSt.foodRequest)
+    ret = FOODREQ;
+    if(sh->fSt.foodOrder)
+    ret = FOODREADY;
+    if(sh->fSt.paymentRequest)
+    ret = BILL;
+    // waiter reads request
 
+    // nesta parte o waiter lê a request??????????
+
+    
     /* insert your code here */
 
     if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
@@ -187,9 +211,9 @@ static void informChef ()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-    // update waiter state to informing chef
-    sh->fSt.st.waiterStat = INFORM_CHEF; 
-    // save waiter state
+    // update waiter state to inform chef
+
+    sh->fSt.st.waiterStat = INFORM_CHEF;
     saveState (nFic, &(sh->fSt));
 
 
@@ -200,12 +224,13 @@ static void informChef ()
         exit (EXIT_FAILURE);
     }
 
-    // wait for food from chef
-    if (semDown (semgid, sh->waiterRequest) == -1) {
-        perror ("error on the down operation for semaphore access (WT)");
+    //up request received semaphore
+    if (semUp (semgid, sh->requestReceived) == -1)  {                                                 
+        perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
 
+    
     /* insert your code here */
 }
 
@@ -228,6 +253,7 @@ static void takeFoodToTable ()
     saveState (nFic, &(sh->fSt));
     printf("BLOCKED IN FOOD ARRIVED UP\n");
     semUp(semgid,sh->foodArrived); // up food arrived semaphore
+    semUp(semgid,sh->requestReceived); // up request received semaphore, waiter is ready for next request
     
     /* insert your code here */
     
@@ -253,6 +279,8 @@ static void receivePayment ()
     //update waiter state
     sh->fSt.st.waiterStat = RECEIVE_PAYMENT;
     // save waiter state
+
+    semUp(semgid,sh->requestReceived); // up request received semaphore, waiter is ready for next request
     saveState (nFic, &(sh->fSt));
 
     /* insert your code here */
