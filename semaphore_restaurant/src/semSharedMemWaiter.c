@@ -187,6 +187,11 @@ static void informChef ()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    // update waiter state to informing chef
+    sh->fSt.st.waiterStat = INFORM_CHEF; 
+    // save waiter state
+    saveState (nFic, &(sh->fSt));
+
 
     /* insert your code here */
 
