@@ -170,29 +170,37 @@ static bool waitFriends(int id)
     if (sh->fSt.tableClients == 1) { // se for o primeiro cliente
         first = true;
         sh->fSt.tableFirst = id; // guarda o id do primeiro cliente
-        printf("VO FZR DOWN NO FRIENDS ARRIVED \n");
-        if (semDown (semgid, sh->friendsArrived) == -1) {            
-        printf("NOT RIP ANYMORE\n");         // deadlock aqui fodasse                          
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
-    }
     }
     sh->friendsArrived++;// +1 cliente à espera
     if (sh->fSt.tableClients == TABLESIZE) { // se for o último cliente
         sh->fSt.tableLast= id; // guarda o id do último cliente
-        if (semUp (semgid, sh->friendsArrived) == -1) { // last client arrived, no need to wait more 
-        perror ("error on the up operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+        // sem up friends arrived
+        semUp(semgid, sh->friendsArrived);
     }
-    }
-    saveState (nFic, &(sh->fSt)); // maybe mudar isto de sitio para o print ficar certo?
+    saveState (nFic, &(sh->fSt)); 
     /* insert your code here  */
 
     if (semUp (semgid, sh->mutex) == -1)                                                      /* exit critical region */
     { perror ("error on the up operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
-   
+
+    if (sh->fSt.tableClients == TABLESIZE) { // se for o último cliente
+        sh->fSt.tableLast= id; // guarda o id do último cliente
+        // sem up friends arrived
+        semUp(semgid, sh->friendsArrived);
+    }
+
+    if (sh->fSt.tableClients != TABLESIZE) { // se não for o último cliente
+        printf("CLIENT ID -> %d", id);
+        printf(" BLOCKED IN FRIENDS ARRIVED DOWN \n");
+    if (semDown (semgid, sh->friendsArrived) == -1) {                                                // sem down friends arrived
+        perror ("error on the down operation for semaphore access (CT)");
+        exit (EXIT_FAILURE);
+    }
+        printf("TABLE CLIENTS -> %d \n", sh->fSt.tableClients);
+    }
+    // sem down on all besides the last client
     /* insert your code here -> i dont know what to do here*/
 
     return first;
@@ -227,7 +235,7 @@ static void orderFood (int id)
     { perror ("error on the up operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
-
+    printf("BLOCKED IN WAITER REQUEST DOWN\n");
     // wait for waiter to receive request , when he does it should up the semaphore
     if (semDown (semgid, sh->waiterRequest == -1)) {                                          
         perror ("error on the down operation for semaphore access (CT)");
@@ -263,12 +271,9 @@ static void waitFood (int id)
         perror ("error on the up operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
-
+    printf("BLOCKED IN FOOD ARRIVED DOWN , client %d\n", id);
     // wait for waiter to bring food, when he does it should up the semaphore
-    if (semDown (semgid, sh->foodArrived) == -1) {                                                  
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
-    }
+    semDown(semgid, sh->foodArrived);
 
     /* insert your code here */
 
@@ -320,6 +325,7 @@ static void waitAndPay (int id)
         perror ("error on the down operation for semaphore access (CT)");
         exit (EXIT_FAILURE);
     }
+    printf("BLOCKED IN ALL FINISHED DOWN\n");
     // wait for others to finish meal, when they do, up this semaphore
     if (semDown (semgid, sh->allFinished) == -1) {                                                  
         perror ("error on the down operation for semaphore access (CT)");
@@ -344,7 +350,7 @@ static void waitAndPay (int id)
             exit (EXIT_FAILURE);
         }
 
-
+        printf("BLOCKED IN WAITER REQUEST DOWN\n");
         //wait for waiter to bring bill, when he does, up this semaphore
         if (semDown (semgid, sh->waiterRequest) == -1) {                                                  
             perror ("error on the down operation for semaphore access (CT)");

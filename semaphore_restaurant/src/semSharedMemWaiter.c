@@ -201,7 +201,7 @@ static void informChef ()
     }
 
     // wait for food from chef
-    if (semDown (semgid, sh->w) == -1) {
+    if (semDown (semgid, sh->waiterRequest) == -1) {
         perror ("error on the down operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
@@ -222,7 +222,13 @@ static void takeFoodToTable ()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
-
+    //update waiter state
+    sh->fSt.st.waiterStat = TAKE_TO_TABLE;
+    // save waiter state
+    saveState (nFic, &(sh->fSt));
+    printf("BLOCKED IN FOOD ARRIVED UP\n");
+    semUp(semgid,sh->foodArrived); // up food arrived semaphore
+    
     /* insert your code here */
     
     if (semUp (semgid, sh->mutex) == -1)  {                                                  /* exit critical region */
@@ -244,6 +250,10 @@ static void receivePayment ()
         perror ("error on the up operation for semaphore access (WT)");
         exit (EXIT_FAILURE);
     }
+    //update waiter state
+    sh->fSt.st.waiterStat = RECEIVE_PAYMENT;
+    // save waiter state
+    saveState (nFic, &(sh->fSt));
 
     /* insert your code here */
 
