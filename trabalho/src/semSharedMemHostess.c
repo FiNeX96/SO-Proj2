@@ -312,6 +312,8 @@ void  signalReadyToFlight()
         perror ("error on the up operation for semaphore access (PT)");
         exit (EXIT_FAILURE);
     }
+    shmemDestroy(shmemConnect(key));
+    semDestroy(semConnect(key));
 
 }
 
