@@ -44,78 +44,87 @@ static int semgid;
 /** \brief pointer to shared memory region */
 static SHARED_DATA *sh;
 
-static bool waitFriends (int id);
-static void orderFood (int id);
-static void waitFood (int id);
-static void travel (int id);
-static void eat (int id);
-static void waitAndPay (int id);
+static bool waitFriends(int id);
+static void orderFood(int id);
+static void waitFood(int id);
+static void travel(int id);
+static void eat(int id);
+static void waitAndPay(int id);
 
 /**
  *  \brief Main program.
  *
  *  Its role is to generate the life cycle of one of intervening entities in the problem: the client.
  */
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-    int key;                                         /*access key to shared memory and semaphore set */
-    char *tinp;                                                    /* numerical parameters test flag */
+    int key;    /*access key to shared memory and semaphore set */
+    char *tinp; /* numerical parameters test flag */
     int n;
 
     /* validation of command line parameters */
-    if (argc != 5) { 
-        freopen ("error_CT", "a", stderr);
-        fprintf (stderr, "Number of parameters is incorrect!\n");
+    if (argc != 5)
+    {
+        freopen("error_CT", "a", stderr);
+        fprintf(stderr, "Number of parameters is incorrect!\n");
         return EXIT_FAILURE;
     }
-    else {
-       freopen (argv[4], "w", stderr);
-       setbuf(stderr,NULL);
+    else
+    {
+        freopen(argv[4], "w", stderr);
+        setbuf(stderr, NULL);
     }
 
-    n = (unsigned int) strtol (argv[1], &tinp, 0);
-    if ((*tinp != '\0') || (n >= TABLESIZE)) { 
-        fprintf (stderr, "Client process identification is wrong!\n");
+    n = (unsigned int)strtol(argv[1], &tinp, 0);
+    if ((*tinp != '\0') || (n >= TABLESIZE))
+    {
+        fprintf(stderr, "Client process identification is wrong!\n");
         return EXIT_FAILURE;
     }
-    strcpy (nFic, argv[2]);
-    key = (unsigned int) strtol (argv[3], &tinp, 0);
-    if (*tinp != '\0') { 
-        fprintf (stderr, "Error on the access key communication!\n");
+    strcpy(nFic, argv[2]);
+    key = (unsigned int)strtol(argv[3], &tinp, 0);
+    if (*tinp != '\0')
+    {
+        fprintf(stderr, "Error on the access key communication!\n");
         return EXIT_FAILURE;
     }
 
     /* connection to the semaphore set and the shared memory region and mapping the shared region onto the
        process address space */
-    if ((semgid = semConnect (key)) == -1) { 
-        perror ("error on connecting to the semaphore set");
+    if ((semgid = semConnect(key)) == -1)
+    {
+        perror("error on connecting to the semaphore set");
         return EXIT_FAILURE;
     }
-    if ((shmid = shmemConnect (key)) == -1) { 
-        perror ("error on connecting to the shared memory region");
+    if ((shmid = shmemConnect(key)) == -1)
+    {
+        perror("error on connecting to the shared memory region");
         return EXIT_FAILURE;
     }
-    if (shmemAttach (shmid, (void **) &sh) == -1) { 
-        perror ("error on mapping the shared region on the process address space");
+    if (shmemAttach(shmid, (void **)&sh) == -1)
+    {
+        perror("error on mapping the shared region on the process address space");
         return EXIT_FAILURE;
     }
 
     /* initialize random generator */
-    srandom ((unsigned int) getpid ());                                                 
-
+    srandom((unsigned int)getpid());
 
     /* simulation of the life cycle of the client */
     travel(n);
     bool first = waitFriends(n);
-    if (first) orderFood(n);
+    if (first)
+        orderFood(n);
     waitFood(n);
     eat(n);
     waitAndPay(n);
 
     /* unmapping the shared region off the process address space */
-    if (shmemDettach (sh) == -1) {
-        perror ("error on unmapping the shared region off the process address space");
-        return EXIT_FAILURE;;
+    if (shmemDettach(sh) == -1)
+    {
+        perror("error on unmapping the shared region off the process address space");
+        return EXIT_FAILURE;
+        ;
     }
 
     return EXIT_SUCCESS;
@@ -128,9 +137,9 @@ int main (int argc, char *argv[])
  *
  *  \param id client id
  */
-static void travel (int id)
+static void travel(int id)
 {
-    usleep((unsigned int) floor ((1000000 * random ()) / RAND_MAX + 1000));
+    usleep((unsigned int)floor((1000000 * random()) / RAND_MAX + 1000));
 }
 
 /**
@@ -140,13 +149,13 @@ static void travel (int id)
  *
  *  \param id client id
  */
-static void eat (int id)
+static void eat(int id)
 {
-    usleep((unsigned int) floor ((MAXEAT * random ()) / RAND_MAX + 1000));
+    usleep((unsigned int)floor((MAXEAT * random()) / RAND_MAX + 1000));
 }
 
 /**
- *  \brief client waits until table is complete 
+ *  \brief client waits until table is complete
  *
  *  Client should udpate state, first and last clients should register their values in shared data,
  *  last client should, in addition, inform the others that the table is complete.
@@ -161,44 +170,51 @@ static bool waitFriends(int id)
 {
     bool first = false;
 
-    if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
-    sh->fSt.tableClients++; // +1 cliente na mesa
+    sh->fSt.tableClients++;                       // +1 cliente na mesa
     sh->fSt.st.clientStat[id] = WAIT_FOR_FRIENDS; // cliente fica à espera
-    if (sh->fSt.tableClients == 1) { // se for o primeiro cliente
+    if (sh->fSt.tableClients == 1)
+    { // se for o primeiro cliente
         first = true;
         sh->fSt.tableFirst = id; // guarda o id do primeiro cliente
     }
-    sh->friendsArrived++;// +1 cliente à espera
-    if (sh->fSt.tableClients == TABLESIZE) { // se for o último cliente
-        sh->fSt.tableLast= id; // guarda o id do último cliente
+    sh->friendsArrived++; // +1 cliente à espera
+    if (sh->fSt.tableClients == TABLESIZE)
+    {                           // se for o último cliente
+        sh->fSt.tableLast = id; // guarda o id do último cliente
         // sem up friends arrived
         semUp(semgid, sh->friendsArrived);
     }
-    saveState (nFic, &(sh->fSt)); 
+    saveState(nFic, &(sh->fSt));
     /* insert your code here  */
 
-    if (semUp (semgid, sh->mutex) == -1)                                                      /* exit critical region */
-    { perror ("error on the up operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1) /* exit critical region */
+    {
+        perror("error on the up operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
 
-    if (sh->fSt.tableClients == TABLESIZE) { // se for o último cliente
-        sh->fSt.tableLast= id; // guarda o id do último cliente
+    if (sh->fSt.tableClients == TABLESIZE)
+    {                           // se for o último cliente
+        sh->fSt.tableLast = id; // guarda o id do último cliente
         // sem up friends arrived
         printf("CLIENT ID -> %d made friendsArrived up \n", id);
         semUp(semgid, sh->friendsArrived);
     }
 
-    if (sh->fSt.tableClients != TABLESIZE) { // se não for o último cliente
+    if (sh->fSt.tableClients != TABLESIZE)
+    { // se não for o último cliente
         printf("CLIENT ID -> %d", id);
         printf(" BLOCKED IN FRIENDS ARRIVED DOWN \n");
-    if (semDown (semgid, sh->friendsArrived) == -1) {                                                // sem down friends arrived
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
-    }
+        if (semDown(semgid, sh->friendsArrived) == -1)
+        { // sem down friends arrived
+            perror("error on the down operation for semaphore access (CT)");
+            exit(EXIT_FAILURE);
+        }
         printf("TABLE CLIENTS -> %d \n", sh->fSt.tableClients);
     }
     // sem down on all besides the last client
@@ -212,39 +228,42 @@ static bool waitFriends(int id)
  *  \brief first client orders food.
  *
  *  This function is used only by the first client.
- *  The first client should update its state, request food to the waiter and 
+ *  The first client should update its state, request food to the waiter and
  *  wait for the waiter to receive the request.
- *  
+ *
  *  The internal state should be saved.
  *
  *  \param id client id
  */
-static void orderFood (int id)
+static void orderFood(int id)
 {
-    if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
     // if its the first client, update state to request food
-    if (sh->fSt.tableFirst == id)  // if its the first client
-    sh->fSt.st.clientStat[id] = FOOD_REQUEST;  // update state to request food
-    sh->fSt.foodOrder++; // +1 pedido de comida
-    semUp(semgid, sh->waiterRequest); // waiter receives a request from the 1st client
-    saveState (nFic, &(sh->fSt));
-
+    if (sh->fSt.tableFirst == id)                 // if its the first client
+        sh->fSt.st.clientStat[id] = FOOD_REQUEST; // update state to request food
+    sh->fSt.foodOrder++;                          // +1 pedido de comida
+    semUp(semgid, sh->waiterRequest);             // waiter receives a request from the 1st client
+    saveState(nFic, &(sh->fSt));
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1)                                                      /* exit critical region */
-    { perror ("error on the up operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1) /* exit critical region */
+    {
+        perror("error on the up operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
-    printf("BLOCKED IN WAITER REQUEST DOWN\n");
+
     // wait for waiter to receive request , when he does it should up the semaphore
-    printf("CLIENT ID -> %d blocked in waiter request down", id);
-    if (semDown (semgid, sh->waiterRequest == -1)) {                                          
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+
+    printf("CLIENT ID -> %d blocked in request received down", id); // make sure the client waits for the waiter to receive the request
+    if (semDown(semgid, sh->requestReceived == -1))
+    {
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
 
     /* insert your code here */
@@ -253,131 +272,142 @@ static void orderFood (int id)
 /**
  *  \brief client waits for food.
  *
- *  The client updates its state, and waits until food arrives. 
+ *  The client updates its state, and waits until food arrives.
  *  It should also update state after food arrives.
  *  The internal state should be saved twice.
  *
  *  \param id client id
  */
-static void waitFood (int id)
+static void waitFood(int id)
 {
 
-    if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
     // update state to waiting for food
     sh->fSt.st.clientStat[id] = WAIT_FOR_FOOD; // update state to waiting for food
-    saveState (nFic, &(sh->fSt));
+    saveState(nFic, &(sh->fSt));
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
-        perror ("error on the up operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1)
+    {                                               /* exit critical region */
+        perror("error on the up operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
     printf("BLOCKED IN FOOD ARRIVED DOWN , client %d\n", id);
-    // wait for waiter to bring food, when he does it should up the semaphore
-    semDown(semgid, sh->foodArrived);
+    semDown(semgid, sh->foodArrived); // wait until the food has arrived
 
     /* insert your code here */
 
-    if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
     // update state to eating
     sh->fSt.st.clientStat[id] = FOODARRIVED; // update state to eating
-    saveState (nFic, &(sh->fSt));
+    saveState(nFic, &(sh->fSt));
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
-        perror ("error on the up operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1)
+    { /* exit critical region */
+        perror("error on the up operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
 }
 
 /**
- *  \brief client waits for others to finish meal, last client to arrive pays the bill. 
+ *  \brief client waits for others to finish meal, last client to arrive pays the bill.
  *
- *  The client updates state and waits for others to finish meal before leaving and update its state. 
+ *  The client updates state and waits for others to finish meal before leaving and update its state.
  *  Last client to finish meal should inform others that everybody finished.
  *  Last client to arrive at table should pay the bill by contacting waiter and waiting for waiter to arrive.
  *  The internal state should be saved twice.
  *
  *  \param id client id
  */
-static void waitAndPay (int id)
+static void waitAndPay(int id)
 {
-    bool last=false;
+    bool last = false;
 
-    if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
-    //update state to finish eating
+    // update state to finish eating
     sh->fSt.st.clientStat[id] = FINISHED; // update state to finish eating
-    if (sh->fSt.tableLast == id){  // if its the last client
+    if (sh->fSt.tableLast == id)
+    { // if its the last client
         last = true;
         semUp(semgid, sh->allFinished);
-        semUp(semgid,sh->requestReceived); // there is a request for payment
-        sh->fSt.paymentRequest ++; // pedido de pagamento ao waiter
-        } // up the semaphore to let others know that they can leave
-    saveState (nFic, &(sh->fSt));
+        semUp(semgid, sh->requestReceived); // there is a request for payment
+        sh->fSt.paymentRequest++;           // pedido de pagamento ao waiter
+    }                                       // up the semaphore to let others know that they can leave
+    saveState(nFic, &(sh->fSt));
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
     printf("BLOCKED IN ALL FINISHED DOWN\n");
     // wait for others to finish meal, when they do, up this semaphore
-    if (semDown (semgid, sh->allFinished) == -1) {                                                  
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->allFinished) == -1)
+    {
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
     /* insert your code here */
 
-    if(last) { 
-        if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-           perror ("error on the down operation for semaphore access (CT)");
-           exit (EXIT_FAILURE);
+    if (last)
+    {
+        if (semDown(semgid, sh->mutex) == -1)
+        { /* enter critical region */
+            perror("error on the down operation for semaphore access (CT)");
+            exit(EXIT_FAILURE);
         }
 
-        //update state to waiting for bill
+        // update state to waiting for bill
         sh->fSt.st.clientStat[id] = WAIT_FOR_BILL; // update state to waiting for bill
-        saveState (nFic, &(sh->fSt));
+        saveState(nFic, &(sh->fSt));
 
         /* insert your code here */
 
-        if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
-            perror ("error on the down operation for semaphore access (CT)");
-            exit (EXIT_FAILURE);
+        if (semUp(semgid, sh->mutex) == -1)
+        { /* exit critical region */
+            perror("error on the down operation for semaphore access (CT)");
+            exit(EXIT_FAILURE);
         }
 
         printf("BLOCKED IN WAITER REQUEST DOWN\n");
-        //wait for waiter to bring bill, when he does, up this semaphore
-        if (semDown (semgid, sh->waiterRequest) == -1) {                                                  
-            perror ("error on the down operation for semaphore access (CT)");
-            exit (EXIT_FAILURE);
+        // wait for waiter to bring bill, when he does, up this semaphore
+        if (semDown(semgid, sh->waiterRequest) == -1)
+        {
+            perror("error on the down operation for semaphore access (CT)");
+            exit(EXIT_FAILURE);
         }
 
         /* insert your code here */
     }
 
-    if (semDown (semgid, sh->mutex) == -1) {                                                  /* enter critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
-        perror ("error on the down operation for semaphore access (CT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1)
+    { /* exit critical region */
+        perror("error on the down operation for semaphore access (CT)");
+        exit(EXIT_FAILURE);
     }
-
 }
-

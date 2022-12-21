@@ -44,97 +44,106 @@ static int semgid;
 static SHARED_DATA *sh;
 
 /** \brief waiter waits for next request */
-static int waitForClientOrChef ();
+static int waitForClientOrChef();
 
 /** \brief waiter takes food order to chef */
 static void informChef();
 
 /** \brief waiter takes food to table */
-static void takeFoodToTable ();
+static void takeFoodToTable();
 
 /** \brief waiter receives payment */
-static void receivePayment ();
+static void receivePayment();
 
-#define FOODREQ   1
+#define FOODREQ 1
 #define FOODREADY 2
-#define BILL      3
-
+#define BILL 3
 
 /**
  *  \brief Main program.
  *
  *  Its role is to generate the life cycle of one of intervening entities in the problem: the waiter.
  */
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-    int key;                                            /*access key to shared memory and semaphore set */
-    char *tinp;                                                       /* numerical parameters test flag */
+    int key;    /*access key to shared memory and semaphore set */
+    char *tinp; /* numerical parameters test flag */
 
     /* validation of command line parameters */
-    if (argc != 4) { 
-        freopen ("error_WT", "a", stderr);
-        fprintf (stderr, "Number of parameters is incorrect!\n");
+    if (argc != 4)
+    {
+        freopen("error_WT", "a", stderr);
+        fprintf(stderr, "Number of parameters is incorrect!\n");
         return EXIT_FAILURE;
     }
-    else { 
-        freopen (argv[3], "w", stderr);
-        setbuf(stderr,NULL);
+    else
+    {
+        freopen(argv[3], "w", stderr);
+        setbuf(stderr, NULL);
     }
 
-    strcpy (nFic, argv[1]);
-    key = (unsigned int) strtol (argv[2], &tinp, 0);
+    strcpy(nFic, argv[1]);
+    key = (unsigned int)strtol(argv[2], &tinp, 0);
     if (*tinp != '\0')
-    { fprintf (stderr, "Error on the access key communication!\n");
+    {
+        fprintf(stderr, "Error on the access key communication!\n");
         return EXIT_FAILURE;
     }
 
     /* connection to the semaphore set and the shared memory region and mapping the shared region onto the
        process address space */
-    if ((semgid = semConnect (key)) == -1) { 
-        perror ("error on connecting to the semaphore set");
+    if ((semgid = semConnect(key)) == -1)
+    {
+        perror("error on connecting to the semaphore set");
         return EXIT_FAILURE;
     }
-    if ((shmid = shmemConnect (key)) == -1) { 
-        perror ("error on connecting to the shared memory region");
+    if ((shmid = shmemConnect(key)) == -1)
+    {
+        perror("error on connecting to the shared memory region");
         return EXIT_FAILURE;
     }
-    if (shmemAttach (shmid, (void **) &sh) == -1) { 
-        perror ("error on mapping the shared region on the process address space");
+    if (shmemAttach(shmid, (void **)&sh) == -1)
+    {
+        perror("error on mapping the shared region on the process address space");
         return EXIT_FAILURE;
     }
 
     /* initialize random generator */
-    srandom ((unsigned int) getpid ());              
+    srandom((unsigned int)getpid());
 
     /* simulation of the life cycle of the waiter */
-    int req, nReq=0;
-    while(nReq<3) {
+    int req, nReq = 0;
+    while (nReq < 3)
+    {
         req = waitForClientOrChef();
-        switch(req) {
-            case FOODREQ:
-                   informChef();
-                   break;
-            case FOODREADY:
-                   takeFoodToTable();
-                   break;
-            case BILL:
-                   receivePayment();
-                   break;
+        switch (req)
+        {
+        case FOODREQ:
+            informChef();
+            break;
+        case FOODREADY:
+            takeFoodToTable();
+            break;
+        case BILL:
+            receivePayment();
+            break;
         }
         nReq++;
     }
 
     /* unmapping the shared region off the process address space */
-    if (shmemDettach (sh) == -1) {
-        perror ("error on unmapping the shared region off the process address space");
-        return EXIT_FAILURE;;
+    if (shmemDettach(sh) == -1)
+    {
+        perror("error on unmapping the shared region off the process address space");
+        return EXIT_FAILURE;
+        ;
     }
 
     return EXIT_SUCCESS;
 }
 
 /**
- *  \brief waiter waits for next request 
+ *  \brief waiter waits for next request
  *
  *  Waiter updates state and waits for request from client or from chef, then reads request.
  *  The internal state should be saved.
@@ -143,151 +152,163 @@ int main (int argc, char *argv[])
  */
 static int waitForClientOrChef()
 {
-    int ret=0; 
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    int ret = 0;
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
     // nesta secção o waiter dá update no estado para waiting
-    // update state to waiting 
+    // update state to waiting
     sh->fSt.st.waiterStat = WAIT_FOR_REQUEST;
     // save state
-    saveState (nFic, &sh->fSt);
+    saveState(nFic, &sh->fSt);
 
     /* insert your code here */
-    
-    if (semUp (semgid, sh->mutex) == -1)      {                                             /* exit critical region */
-        perror ("error on the down operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+
+    if (semUp(semgid, sh->mutex) == -1)                     /* exit critical region */
+    { 
+        perror("error on the down operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
 
-    //nesta parte o waiter blocka o request received para só receber 1 request de cada vez
+    // nesta parte o waiter blocka o request received para só receber 1 request de cada vez
 
-    // sem down request received
-    if (semDown (semgid, sh->requestReceived) == -1)  {                                                 
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    // sem down waiter request -> until waiter has no pending requests, hes blocked here
+    printf("Waiter blocked on waiter request down \n");
+    if (semDown(semgid, sh->waiterRequest) == -1)
+    { // make waiter wait for a request
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
-    // read the request, only 1 at each time should have a value of 1 , the others should be 0
-    
+
     /* insert your code here */
 
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
-    if(sh->fSt.foodRequest)
-    ret = FOODREQ;
-    if(sh->fSt.foodOrder)
-    ret = FOODREADY;
-    if(sh->fSt.paymentRequest)
-    ret = BILL;
-    // waiter reads request
 
-    // nesta parte o waiter lê a request??????????
+    if (sh->fSt.foodRequest)
+        ret = FOODREQ;
+    if (sh->fSt.foodOrder)
+        ret = FOODREADY;
+    if (sh->fSt.paymentRequest)
+        ret = BILL;
 
-    
+    // after reading the request reset the flags 
+    sh->fSt.paymentRequest = 0;
+    sh->fSt.foodOrder = 0;
+    sh->fSt.foodRequest = 0;
+
+    semUp(semgid, sh->requestReceived); // the waiter sucessefully received and read the request
+
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1) {                                                  /* exit critical region */
-     perror ("error on the down operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1)
+    { /* exit critical region */
+        perror("error on the down operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
 
     return ret;
-
 }
 
 /**
- *  \brief waiter takes food order to chef 
+ *  \brief waiter takes food order to chef
  *
  *  Waiter updates state and then takes food request to chef.
  *  The internal state should be saved.
  *
  */
-static void informChef ()
+static void informChef()
 {
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
     // update waiter state to inform chef
 
     sh->fSt.st.waiterStat = INFORM_CHEF;
-    saveState (nFic, &(sh->fSt));
-
+    saveState(nFic, &(sh->fSt));
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1)                                                   /* exit critical region */
-    { perror ("error on the down operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1) /* exit critical region */
+    {
+        perror("error on the down operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
 
-    //up request received semaphore
-    if (semUp (semgid, sh->requestReceived) == -1)  {                                                 
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    //sem up wait for order -> unblock chef, he now has a order to cook
+    printf("Waiter: unblocking chef ( SEM UP WAIT ORDER )\n");
+    if (semUp(semgid, sh->waitOrder) == -1)
+    { // make waiter wait for a request
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
-
-    
     /* insert your code here */
 }
 
 /**
- *  \brief waiter takes food to table 
+ *  \brief waiter takes food to table
  *
  *  Waiter updates its state and takes food to table, allowing the meal to start.
  *  The internal state should be saved.
  *
  */
-static void takeFoodToTable ()
+static void takeFoodToTable()
 {
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
-    //update waiter state
+    // update waiter state
     sh->fSt.st.waiterStat = TAKE_TO_TABLE;
     // save waiter state
-    saveState (nFic, &(sh->fSt));
+    saveState(nFic, &(sh->fSt));
     printf("BLOCKED IN FOOD ARRIVED UP\n");
-    semUp(semgid,sh->foodArrived); // up food arrived semaphore
-    semUp(semgid,sh->requestReceived); // up request received semaphore, waiter is ready for next request
-    
+    semUp(semgid, sh->foodArrived);     // up food arrived semaphore
+    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
+
     /* insert your code here */
-    
-    if (semUp (semgid, sh->mutex) == -1)  {                                                  /* exit critical region */
-     perror ("error on the down operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+
+    if (semUp(semgid, sh->mutex) == -1)
+    { /* exit critical region */
+        perror("error on the down operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
 }
 
 /**
- *  \brief waiter receives payment 
+ *  \brief waiter receives payment
  *
  *  Waiter updates its state and receives payment from last client.
  *  The internal state should be saved.
  *
  */
-static void receivePayment ()
+static void receivePayment()
 {
-    if (semDown (semgid, sh->mutex) == -1)  {                                                  /* enter critical region */
-        perror ("error on the up operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semDown(semgid, sh->mutex) == -1)
+    { /* enter critical region */
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
-    //update waiter state
+    // update waiter state
     sh->fSt.st.waiterStat = RECEIVE_PAYMENT;
     // save waiter state
 
-    semUp(semgid,sh->requestReceived); // up request received semaphore, waiter is ready for next request
-    saveState (nFic, &(sh->fSt));
+    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
+    saveState(nFic, &(sh->fSt));
 
     /* insert your code here */
 
-    if (semUp (semgid, sh->mutex) == -1)  {                                                  /* exit critical region */
-     perror ("error on the down operation for semaphore access (WT)");
-        exit (EXIT_FAILURE);
+    if (semUp(semgid, sh->mutex) == -1)
+    { /* exit critical region */
+        perror("error on the down operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
     }
 }
-
