@@ -25,12 +25,15 @@
 #include <string.h>
 #include <math.h>
 
+
 #include "probConst.h"
 #include "probDataStruct.h"
 #include "logging.h"
 #include "sharedDataSync.h"
 #include "semaphore.h"
 #include "sharedMemory.h"
+
+#define DEBUG 0  // flag used for debugging purposes
 
 /** \brief logging file name */
 static char nFic[51];
@@ -175,20 +178,23 @@ static bool waitFriends(int id)
         perror("error on the down operation for semaphore access (CT)");
         exit(EXIT_FAILURE);
     }
-    sh->fSt.tableClients++;                       // +1 cliente na mesa
+    sh->fSt.tableClients++; // 1 more table client
+    #if DEBUG
+    //printf("Total table size is %d \n", sh->fSt.tableClients);                        // +1 cliente na mesa
+    #endif                       
     sh->fSt.st.clientStat[id] = WAIT_FOR_FRIENDS; // cliente fica à espera
     if (sh->fSt.tableClients == 1)
     { // se for o primeiro cliente
         first = true;
         sh->fSt.tableFirst = id; // guarda o id do primeiro cliente
     }
-    sh->friendsArrived++; // +1 cliente à espera
-    if (sh->fSt.tableClients == TABLESIZE)
-    {                           // se for o último cliente
-        sh->fSt.tableLast = id; // guarda o id do último cliente
-        // sem up friends arrived
-        semUp(semgid, sh->friendsArrived);
+    if (sh->fSt.tableClients == TABLESIZE){
+    sh->fSt.tableLast = id;
+    #if DEBUG
+    printf("Last client is %d \n", sh->fSt.tableLast);
+    #endif
     }
+
     saveState(nFic, &(sh->fSt));
     /* insert your code here  */
 
@@ -197,29 +203,27 @@ static bool waitFriends(int id)
         perror("error on the up operation for semaphore access (CT)");
         exit(EXIT_FAILURE);
     }
-
-    if (sh->fSt.tableClients == TABLESIZE)
+    if (id != sh->fSt.tableLast){
+        #if DEBUG
+        printf("CLIENT ID -> %d made friendsArrived down \n", id);
+        #endif
+        semDown(semgid, sh->friendsArrived);
+        
+    } 
+    if (sh->fSt.tableLast == id)
     {                           // se for o último cliente
-        sh->fSt.tableLast = id; // guarda o id do último cliente
         // sem up friends arrived
-        printf("CLIENT ID -> %d made friendsArrived up \n", id);
         semUp(semgid, sh->friendsArrived);
+        #if DEBUG
+        printf("CLIENT ID -> %d made friendsArrived up \n", id);
+        #endif
     }
+    
+    #if DEBUG
+    //printf("Client %d is exiting waitFriends function \n", id);
+    #endif
 
-    if (sh->fSt.tableClients != TABLESIZE)
-    { // se não for o último cliente
-        printf("CLIENT ID -> %d", id);
-        printf(" BLOCKED IN FRIENDS ARRIVED DOWN \n");
-        if (semDown(semgid, sh->friendsArrived) == -1)
-        { // sem down friends arrived
-            perror("error on the down operation for semaphore access (CT)");
-            exit(EXIT_FAILURE);
-        }
-        printf("TABLE CLIENTS -> %d \n", sh->fSt.tableClients);
-    }
-    // sem down on all besides the last client
-
-    /* insert your code here -> i dont know what to do here*/
+    /* insert your code here */
 
     return first;
 }
@@ -243,11 +247,13 @@ static void orderFood(int id)
         exit(EXIT_FAILURE);
     }
     // if its the first client, update state to request food
-    if (sh->fSt.tableFirst == id)                 // if its the first client
+    if (sh->fSt.tableFirst == id){                 // if its the first client
         sh->fSt.st.clientStat[id] = FOOD_REQUEST; // update state to request food
-    sh->fSt.foodOrder++;                          // +1 pedido de comida
-    semUp(semgid, sh->waiterRequest);             // waiter receives a request from the 1st client
-    saveState(nFic, &(sh->fSt));
+        sh->fSt.foodRequest++;                          // +1 pedido de comida
+        printf("CLIENT ID -> %d made waiterRequest up -> waiter is now unblocked \n", id);
+        semUp(semgid, sh->waiterRequest);             // waiter receives a request from the 1st client
+        saveState(nFic, &(sh->fSt));
+    }
 
     /* insert your code here */
 
@@ -258,13 +264,8 @@ static void orderFood(int id)
     }
 
     // wait for waiter to receive request , when he does it should up the semaphore
+    //semDown(semgid,sh->requestReceived);
 
-    printf("CLIENT ID -> %d blocked in request received down", id); // make sure the client waits for the waiter to receive the request
-    if (semDown(semgid, sh->requestReceived == -1))
-    {
-        perror("error on the down operation for semaphore access (CT)");
-        exit(EXIT_FAILURE);
-    }
 
     /* insert your code here */
 }
@@ -280,7 +281,6 @@ static void orderFood(int id)
  */
 static void waitFood(int id)
 {
-
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the down operation for semaphore access (CT)");
@@ -297,8 +297,10 @@ static void waitFood(int id)
         perror("error on the up operation for semaphore access (CT)");
         exit(EXIT_FAILURE);
     }
-    printf("BLOCKED IN FOOD ARRIVED DOWN , client %d\n", id);
+    
+    //printf("BLOCKED IN FOOD ARRIVED DOWN , client %d\n", id);
     semDown(semgid, sh->foodArrived); // wait until the food has arrived
+    printf("Someone got past the food arrived down, client %d\n", id);
 
     /* insert your code here */
 
@@ -346,6 +348,8 @@ static void waitAndPay(int id)
         last = true;
         semUp(semgid, sh->allFinished);
         semUp(semgid, sh->requestReceived); // there is a request for payment
+        printf("CLIENT ID -> %d made waiterRequest up in WaitAndPay -> waiter is now unblocked \n", id);
+        semUp(semgid,sh->waiterRequest); // waiter receives a request from the last client
         sh->fSt.paymentRequest++;           // pedido de pagamento ao waiter
     }                                       // up the semaphore to let others know that they can leave
     saveState(nFic, &(sh->fSt));

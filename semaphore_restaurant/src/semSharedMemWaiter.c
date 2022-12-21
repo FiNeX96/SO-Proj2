@@ -152,13 +152,13 @@ int main(int argc, char *argv[])
  */
 static int waitForClientOrChef()
 {
+    printf("Waiter entering waitforclientorchef \n");
     int ret = 0;
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
-    // nesta secção o waiter dá update no estado para waiting
     // update state to waiting
     sh->fSt.st.waiterStat = WAIT_FOR_REQUEST;
     // save state
@@ -172,15 +172,14 @@ static int waitForClientOrChef()
         exit(EXIT_FAILURE);
     }
 
-    // nesta parte o waiter blocka o request received para só receber 1 request de cada vez
-
-    // sem down waiter request -> until waiter has no pending requests, hes blocked here
+    //sem down waiter request -> until waiter has no pending requests, hes blocked here
     printf("Waiter blocked on waiter request down \n");
     if (semDown(semgid, sh->waiterRequest) == -1)
     { // make waiter wait for a request
         perror("error on the up operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
+    printf("Waiter has been unblocked \n");
 
     /* insert your code here */
 
@@ -192,18 +191,19 @@ static int waitForClientOrChef()
 
     if (sh->fSt.foodRequest)
         ret = FOODREQ;
-    if (sh->fSt.foodOrder)
+    if (sh->fSt.foodReady)
         ret = FOODREADY;
     if (sh->fSt.paymentRequest)
         ret = BILL;
 
     // after reading the request reset the flags 
     sh->fSt.paymentRequest = 0;
-    sh->fSt.foodOrder = 0;
+    sh->fSt.foodReady= 0;
     sh->fSt.foodRequest = 0;
-
+    printf("Waiter has read the request , it is %d \n",ret);
     semUp(semgid, sh->requestReceived); // the waiter sucessefully received and read the request
-
+    printf("Request received up -> Waiter is ready for a new request \n");
+    
     /* insert your code here */
 
     if (semUp(semgid, sh->mutex) == -1)
@@ -211,7 +211,7 @@ static int waitForClientOrChef()
         perror("error on the down operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
-
+    printf("WAITER EXITING WAITFORCLIENTORCHEF \n");
     return ret;
 }
 
@@ -224,6 +224,7 @@ static int waitForClientOrChef()
  */
 static void informChef()
 {
+    printf("Waiter entering inform chef \n");
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");
@@ -245,10 +246,11 @@ static void informChef()
     //sem up wait for order -> unblock chef, he now has a order to cook
     printf("Waiter: unblocking chef ( SEM UP WAIT ORDER )\n");
     if (semUp(semgid, sh->waitOrder) == -1)
-    { // make waiter wait for a request
+    { 
         perror("error on the up operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
+
     /* insert your code here */
 }
 
@@ -261,6 +263,7 @@ static void informChef()
  */
 static void takeFoodToTable()
 {
+    printf("Waiter entering take food to table \n");
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");
@@ -292,6 +295,7 @@ static void takeFoodToTable()
  */
 static void receivePayment()
 {
+    printf("Waiter entering receive payment \n");
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");

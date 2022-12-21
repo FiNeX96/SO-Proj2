@@ -122,8 +122,12 @@ int main(int argc, char *argv[])
  */
 static void waitForOrder()
 {
-    sh->fSt.st.chefStat = WAIT_FOR_ORDER;
-    saveState(nFic, &sh->fSt);
+    if (semDown(semgid, sh->waitOrder) == -1)
+    { 
+        perror("error on the up operation for semaphore access (PT)");
+        exit(EXIT_FAILURE);
+    }
+    printf("Chef has a request! \n");
     /* insert your code here */
 
     if (semDown(semgid, sh->mutex) == -1)
@@ -132,14 +136,9 @@ static void waitForOrder()
         exit(EXIT_FAILURE);
     }
 
-    //sem down wait order -> chef waits for a order
-    printf("CHEF BLOCKED ON WAIT ORDER DOWN \n");
-    if (semDown(semgid, sh->waitOrder) == -1)
-    { 
-        perror("error on the up operation for semaphore access (PT)");
-        exit(EXIT_FAILURE);
-    }
-
+    sh->fSt.st.chefStat = WAIT_FOR_ORDER;
+    saveState(nFic, &sh->fSt);
+    
     /* insert your code here */
 
     if (semUp(semgid, sh->mutex) == -1)
@@ -166,12 +165,12 @@ static void processOrder()
         exit(EXIT_FAILURE);
     }
 
-
     sh->fSt.st.chefStat = COOK; // chef has finished cooking, he can rest
-
-    //sem down 
-    
-
+    saveState(nFic, &sh->fSt);
+    sh->fSt.foodReady = 1; // food is ready
+    printf("WAITER REQUEST UP FROM CHEF \n");
+    semUp(semgid,sh->waiterRequest); // call waiter to deliver food
+ 
 
     /* insert your code here */
 
@@ -180,6 +179,9 @@ static void processOrder()
         perror("error on the up operation for semaphore access (PT)");
         exit(EXIT_FAILURE);
     }
+
+    sh->fSt.st.chefStat = REST; // chef has finished cooking, he can rest
+    saveState(nFic, &sh->fSt);
 
     /* insert your code here */
 }
