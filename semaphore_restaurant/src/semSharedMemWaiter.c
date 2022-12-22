@@ -273,8 +273,9 @@ static void takeFoodToTable()
     sh->fSt.st.waiterStat = TAKE_TO_TABLE;
     // save waiter state
     saveState(nFic, &(sh->fSt));
-    printf("BLOCKED IN FOOD ARRIVED UP\n");
-    semUp(semgid, sh->foodArrived);     // up food arrived semaphore
+    for(int i=0; i< TABLESIZE-1; i++){
+    semUp(semgid, sh->foodArrived);     // unblock all clients waiting for food
+    }
     semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
 
     /* insert your code here */
@@ -303,10 +304,11 @@ static void receivePayment()
     }
     // update waiter state
     sh->fSt.st.waiterStat = RECEIVE_PAYMENT;
-    // save waiter state
-
-    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
     saveState(nFic, &(sh->fSt));
+    // save waiter state
+    printf("Waiter is up to receive payment \n");
+    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
+
 
     /* insert your code here */
 
@@ -315,4 +317,5 @@ static void receivePayment()
         perror("error on the down operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
+    printf("Waiter has successfully finished all the steps \n");
 }

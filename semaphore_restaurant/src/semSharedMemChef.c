@@ -182,6 +182,6 @@ static void processOrder()
 
     sh->fSt.st.chefStat = REST; // chef has finished cooking, he can rest
     saveState(nFic, &sh->fSt);
-
+    printf("Chef has successfully finished all the steps \n");
     /* insert your code here */
 }
