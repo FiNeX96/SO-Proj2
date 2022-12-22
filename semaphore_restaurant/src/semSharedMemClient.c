@@ -347,6 +347,7 @@ static void waitAndPay(int id)
     // update state to finish eating
     
     sh->fSt.st.clientStat[id] = WAIT_FOR_OTHERS;
+    sh->fSt.tableFinishEat++;
     saveState(nFic, &(sh->fSt));
                                  
     /* insert your code here */
@@ -383,6 +384,7 @@ static void waitAndPay(int id)
         }
 
         sh->fSt.st.clientStat[id] = WAIT_FOR_BILL;
+        //sh->fSt.tableFinishEat++;
         saveState(nFic, &(sh->fSt));
         
         /* insert your code here */
