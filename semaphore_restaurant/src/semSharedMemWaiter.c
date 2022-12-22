@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
  */
 static int waitForClientOrChef()
 {
-    printf("Waiter entering waitforclientorchef \n");
+    //printf("Waiter entering waitforclientorchef \n");
     int ret = 0;
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
@@ -173,13 +173,13 @@ static int waitForClientOrChef()
     }
 
     //sem down waiter request -> until waiter has no pending requests, hes blocked here
-    printf("Waiter blocked on waiter request down \n");
+    //printf("Waiter blocked on waiter request down \n");
     if (semDown(semgid, sh->waiterRequest) == -1)
     { // make waiter wait for a request
         perror("error on the up operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
-    printf("Waiter has been unblocked \n");
+    //printf("Waiter has been unblocked \n");
 
     /* insert your code here */
 
@@ -200,9 +200,9 @@ static int waitForClientOrChef()
     sh->fSt.paymentRequest = 0;
     sh->fSt.foodReady= 0;
     sh->fSt.foodRequest = 0;
-    printf("Waiter has read the request , it is %d \n",ret);
+    //printf("Waiter has read the request , it is %d \n",ret);
     semUp(semgid, sh->requestReceived); // the waiter sucessefully received and read the request
-    printf("Request received up -> Waiter is ready for a new request \n");
+    //printf("Request received up -> Waiter is ready for a new request \n");
     
     /* insert your code here */
 
@@ -211,7 +211,7 @@ static int waitForClientOrChef()
         perror("error on the down operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
-    printf("WAITER EXITING WAITFORCLIENTORCHEF \n");
+    //printf("WAITER EXITING WAITFORCLIENTORCHEF \n");
     return ret;
 }
 
@@ -224,7 +224,7 @@ static int waitForClientOrChef()
  */
 static void informChef()
 {
-    printf("Waiter entering inform chef \n");
+    //printf("Waiter entering inform chef \n");
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");
@@ -244,7 +244,7 @@ static void informChef()
     }
 
     //sem up wait for order -> unblock chef, he now has a order to cook
-    printf("Waiter: unblocking chef ( SEM UP WAIT ORDER )\n");
+    //printf("Waiter: unblocking chef ( SEM UP WAIT ORDER )\n");
     if (semUp(semgid, sh->waitOrder) == -1)
     { 
         perror("error on the up operation for semaphore access (WT)");
@@ -263,7 +263,7 @@ static void informChef()
  */
 static void takeFoodToTable()
 {
-    printf("Waiter entering take food to table \n");
+    //printf("Waiter entering take food to table \n");
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");
@@ -273,7 +273,7 @@ static void takeFoodToTable()
     sh->fSt.st.waiterStat = TAKE_TO_TABLE;
     // save waiter state
     saveState(nFic, &(sh->fSt));
-    for(int i=0; i< TABLESIZE-1; i++){
+    for(int i=0; i< TABLESIZE; i++){
     semUp(semgid, sh->foodArrived);     // unblock all clients waiting for food
     }
     semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
@@ -296,7 +296,7 @@ static void takeFoodToTable()
  */
 static void receivePayment()
 {
-    printf("Waiter entering receive payment \n");
+    //printf("Waiter entering receive payment \n");
     if (semDown(semgid, sh->mutex) == -1)
     { /* enter critical region */
         perror("error on the up operation for semaphore access (WT)");
@@ -306,7 +306,7 @@ static void receivePayment()
     sh->fSt.st.waiterStat = RECEIVE_PAYMENT;
     saveState(nFic, &(sh->fSt));
     // save waiter state
-    printf("Waiter is up to receive payment \n");
+    //printf("Waiter is up to receive payment \n");
     semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
 
 
@@ -317,5 +317,5 @@ static void receivePayment()
         perror("error on the down operation for semaphore access (WT)");
         exit(EXIT_FAILURE);
     }
-    printf("Waiter has successfully finished all the steps \n");
+    //printf("Waiter has successfully finished all the steps \n");
 }

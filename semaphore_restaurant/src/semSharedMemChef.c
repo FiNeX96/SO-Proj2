@@ -127,7 +127,7 @@ static void waitForOrder()
         perror("error on the up operation for semaphore access (PT)");
         exit(EXIT_FAILURE);
     }
-    printf("Chef has a request! \n");
+    //printf("Chef has a request! \n");
     /* insert your code here */
 
     if (semDown(semgid, sh->mutex) == -1)
@@ -168,7 +168,7 @@ static void processOrder()
     sh->fSt.st.chefStat = COOK; // chef has finished cooking, he can rest
     saveState(nFic, &sh->fSt);
     sh->fSt.foodReady = 1; // food is ready
-    printf("WAITER REQUEST UP FROM CHEF \n");
+    //printf("WAITER REQUEST UP FROM CHEF \n");
     semUp(semgid,sh->waiterRequest); // call waiter to deliver food
  
 
@@ -182,6 +182,6 @@ static void processOrder()
 
     sh->fSt.st.chefStat = REST; // chef has finished cooking, he can rest
     saveState(nFic, &sh->fSt);
-    printf("Chef has successfully finished all the steps \n");
+    //printf("Chef has successfully finished all the steps \n");
     /* insert your code here */
 }

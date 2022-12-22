@@ -252,7 +252,7 @@ static void orderFood(int id)
     if (sh->fSt.tableFirst == id){                 // if its the first client
         sh->fSt.st.clientStat[id] = FOOD_REQUEST; // update state to request food
         sh->fSt.foodRequest++;                          // +1 pedido de comida
-        printf("CLIENT ID -> %d made waiterRequest up -> waiter is now unblocked \n", id);
+        //printf("CLIENT ID -> %d made waiterRequest up -> waiter is now unblocked \n", id);
         semUp(semgid, sh->waiterRequest);             // waiter receives a request from the 1st client
         saveState(nFic, &(sh->fSt));
     }
@@ -345,22 +345,10 @@ static void waitAndPay(int id)
         exit(EXIT_FAILURE);
     }
     // update state to finish eating
-    if (sh->fSt.st.clientStat[id] != FINISHED){
+    
     sh->fSt.st.clientStat[id] = WAIT_FOR_OTHERS;
     saveState(nFic, &(sh->fSt));
-    }
-
-    if (sh->fSt.tableLast == id)
-    { // if its the last client
-        last = true;
-        for (int i = 0 ; i< TABLESIZE ; i++){
-        semUp(semgid, sh->allFinished);
-        }
-        sh->fSt.paymentRequest++; // pedido de pagamento ao waiter
-        semUp(semgid, sh->requestReceived); // there is a request for payment
-        printf("CLIENT ID -> %d made waiterRequest up in WaitAndPay -> waiter is now unblocked \n", id);
-        semUp(semgid,sh->waiterRequest); // waiter receives a request from the last client          
-    }                                       
+                                 
     /* insert your code here */
 
     if (semUp(semgid, sh->mutex) == -1)
@@ -368,13 +356,22 @@ static void waitAndPay(int id)
         perror("error on the down operation for semaphore access (CT)");
         exit(EXIT_FAILURE);
     }
-    // wait for others to finish meal, when they do, up this semaphore
-    
-    if (id != sh->fSt.tableLast){
-        printf("BLOCKED IN ALL FINISHED DOWN -> client %d\n", id);
-        semDown(semgid, sh->allFinished);
+
+    if (sh->fSt.tableLast == id)
+    { // if its the last client
+        last = true;
+        for (int i = 0 ; i< TABLESIZE ; i++){
+        semUp(semgid, sh->allFinished); // unblock all others
+        }
+        sh->fSt.paymentRequest++; // pedido de pagamento ao waiter
+        semUp(semgid, sh->requestReceived); // there is a request for payment
+        //printf("CLIENT ID -> %d made waiterRequest up in WaitAndPay -> waiter is now unblocked \n", id);
+        semUp(semgid,sh->waiterRequest); // waiter receives a request from the last client          
     }
-    printf("CLIENT id %d is now unblocked from allFinished down by last client %d \n",id,sh->fSt.tableLast);
+    else{
+        semDown(semgid,sh->allFinished); // sem down all finished
+    }      
+
     /* insert your code here */
 
     if (last)
@@ -384,15 +381,10 @@ static void waitAndPay(int id)
             perror("error on the down operation for semaphore access (CT)");
             exit(EXIT_FAILURE);
         }
-        for (int i=0;i<=TABLESIZE;i++){
-            //printf("LAST CLIENT WILL UNBLOCK EVERYONE NOW -> client %d\n", id);
-            semUp(semgid, sh->allFinished); // unblock all the others that have finished
-            if (i != sh->fSt.tableLast){
-                sh->fSt.st.clientStat[i] = FINISHED; // update state to finished
-                sh->fSt.tableFinishEat++;
-                saveState(nFic, &(sh->fSt));
-            }
-        }
+
+        sh->fSt.st.clientStat[id] = WAIT_FOR_BILL;
+        saveState(nFic, &(sh->fSt));
+        
         /* insert your code here */
 
         if (semUp(semgid, sh->mutex) == -1)
@@ -401,12 +393,8 @@ static void waitAndPay(int id)
             exit(EXIT_FAILURE);
         }
 
-        if(last){
-            sh->fSt.st.clientStat[id] = FINISHED;
-            saveState(nFic, &(sh->fSt));
-        }
-
-        /* insert your code here */
+        sh->fSt.st.clientStat[id] = FINISHED;
+        saveState(nFic, &(sh->fSt));
     }
 
     if (semDown(semgid, sh->mutex) == -1)
@@ -414,11 +402,9 @@ static void waitAndPay(int id)
         perror("error on the down operation for semaphore access (CT)");
         exit(EXIT_FAILURE);
     }
-    if (last){  
-    sh->fSt.st.clientStat[id] = WAIT_FOR_BILL; // update state to waiting for bill
-    saveState(nFic, &(sh->fSt));   
-}
-
+    
+    sh->fSt.st.clientStat[id] = FINISHED;
+    saveState(nFic, &(sh->fSt));
     /* insert your code here */
 
     if (semUp(semgid, sh->mutex) == -1)
@@ -426,5 +412,5 @@ static void waitAndPay(int id)
         perror("error on the down operation for semaphore access (CT)");
         exit(EXIT_FAILURE);
     }
-    printf("Client %d has successfully finished all the steps \n", id);
+    //printf("Client %d has successfully finished all the steps \n", id);
 }
