@@ -280,7 +280,7 @@ static void takeFoodToTable()
     for(int i=0; i< TABLESIZE; i++){
     semUp(semgid, sh->foodArrived);     // unblock all clients waiting for food
     }
-    //semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
+    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
 
     /* insert your code here */
 
@@ -310,8 +310,7 @@ static void receivePayment()
     sh->fSt.st.waiterStat = RECEIVE_PAYMENT;
     saveState(nFic, &(sh->fSt));
     // save waiter state
-    //printf("Waiter is up to receive payment \n");
-    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
+    semUp(semgid, sh->requestReceived); // up request received semaphore
 
 
     /* insert your code here */

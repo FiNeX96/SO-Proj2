@@ -342,8 +342,8 @@ static void waitAndPay(int id)
         last = true;
         }
     sh->fSt.st.clientStat[id] = WAIT_FOR_OTHERS;
-    saveState(nFic, &(sh->fSt));
     sh->fSt.tableFinishEat++;
+    saveState(nFic, &(sh->fSt));
     if (sh->fSt.tableFinishEat == TABLESIZE){
         for (int i = 0 ; i < TABLESIZE ; i++){
         semUp(semgid, sh->allFinished); // unblock all others
@@ -372,7 +372,6 @@ static void waitAndPay(int id)
         }
 
         sh->fSt.st.clientStat[id] = WAIT_FOR_BILL;
-        //sh->fSt.tableFinishEat++;
         saveState(nFic, &(sh->fSt));
         sh->fSt.paymentRequest++; // pedido de pagamento 
         semUp(semgid, sh->waiterRequest); // waiter receives a payment request from the last client
