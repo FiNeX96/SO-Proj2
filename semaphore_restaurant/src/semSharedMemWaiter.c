@@ -195,13 +195,12 @@ static int waitForClientOrChef()
         ret = FOODREADY;
     if (sh->fSt.paymentRequest)
         ret = BILL;
-
     // after reading the request reset the flags 
     sh->fSt.paymentRequest = 0;
     sh->fSt.foodReady= 0;
     sh->fSt.foodRequest = 0;
     //printf("Waiter has read the request , it is %d \n",ret);
-    semUp(semgid, sh->requestReceived); // the waiter sucessefully received and read the request
+    //semUp(semgid, sh->requestReceived); // the waiter sucessefully received and read the request
     //printf("Request received up -> Waiter is ready for a new request \n");
     
     /* insert your code here */
@@ -245,6 +244,11 @@ static void informChef()
 
     //sem up wait for order -> unblock chef, he now has a order to cook
     //printf("Waiter: unblocking chef ( SEM UP WAIT ORDER )\n");
+    if(semUp(semgid,sh->requestReceived) == -1)
+    {
+        perror("error on the up operation for semaphore access (WT)");
+        exit(EXIT_FAILURE);
+    }
     if (semUp(semgid, sh->waitOrder) == -1)
     { 
         perror("error on the up operation for semaphore access (WT)");
@@ -276,7 +280,7 @@ static void takeFoodToTable()
     for(int i=0; i< TABLESIZE; i++){
     semUp(semgid, sh->foodArrived);     // unblock all clients waiting for food
     }
-    semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
+    //semUp(semgid, sh->requestReceived); // up request received semaphore, waiter is ready for next request
 
     /* insert your code here */
 
