@@ -190,6 +190,7 @@ static bool waitFriends(int id)
     }
     if (sh->fSt.tableClients == TABLESIZE){
     sh->fSt.tableLast = id;     // guarda o id do ultimo cliente
+
     #if DEBUG
     printf("Last client is %d \n", sh->fSt.tableLast);
     #endif
@@ -208,6 +209,7 @@ static bool waitFriends(int id)
         
     } 
     if (sh->fSt.tableLast == id){    // se for o último cliente
+        sh->fSt.st.clientStat[id] = WAIT_FOR_FOOD;
         for (int i=0 ; i<TABLESIZE-1 ; i++){
         semUp(semgid, sh->friendsArrived); // desbloquear todos os outros clientes
     }     
